@@ -1,6 +1,6 @@
 from .._core.submit import submit_api_task
 from .._core.tasks import Task, TaskKind, RECORD_INFO_ENDPOINTS
-from ..models import Lyrics
+from ..models import TimestampedLyrics, Lyrics
 
 
 class LyricsResource:
@@ -33,3 +33,11 @@ class LyricsResource:
 
     def get(self, task_id: str) -> list[Lyrics]:
         return Lyrics.from_task_data(self.get_task(task_id))
+
+    def get_timestamped(self, task_id: str, audio_id: str) -> TimestampedLyrics:
+        """Retrieve synchronized lyrics with word-level timestamps."""
+        response = self.client.post(
+            "/api/v1/generate/get-timestamped-lyrics",
+            {"taskId": task_id, "audioId": audio_id},
+        )
+        return TimestampedLyrics.from_api_data(response["data"])

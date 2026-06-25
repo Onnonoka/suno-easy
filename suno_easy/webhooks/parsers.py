@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..exceptions import TaskFailed
-from ..models import CoverImage, Lyrics, MIDIData, SeparatedStems, Song
+from ..models import CoverImage, Lyrics, MIDIData, MusicVideo, SeparatedStems, Song, WavFile
 from .events import WebhookEvent
 
 
@@ -101,6 +101,24 @@ def parse_midi_webhook(payload: dict[str, Any]) -> tuple[WebhookEvent, MIDIData]
     return event, MIDIData.from_callback_data(midi_source if isinstance(midi_source, dict) else {})
 
 
+def parse_wav_webhook(payload: dict[str, Any]) -> tuple[WebhookEvent, WavFile]:
+    """Parse a WAV conversion callback."""
+    event = parse_webhook(payload)
+    if event.is_error:
+        _ensure_not_error(event)
+    data = payload.get("data") or {}
+    return event, WavFile.from_task_data(data if isinstance(data, dict) else {})
+
+
+def parse_video_webhook(payload: dict[str, Any]) -> tuple[WebhookEvent, MusicVideo]:
+    """Parse a music video generation callback."""
+    event = parse_webhook(payload)
+    if event.is_error:
+        _ensure_not_error(event)
+    data = payload.get("data") or {}
+    return event, MusicVideo.from_task_data(data if isinstance(data, dict) else {})
+
+
 def dispatch_webhook(payload: dict[str, Any]) -> tuple[WebhookEvent, Any]:
     """Best-effort parser based on payload shape."""
     event = parse_webhook(payload)
@@ -110,6 +128,14 @@ def dispatch_webhook(payload: dict[str, Any]) -> tuple[WebhookEvent, Any]:
         return parse_lyrics_webhook(payload)
     if items and ("audio_url" in items[0] or "audioUrl" in items[0]):
         return parse_music_webhook(payload)
+    data = payload.get("data") or {}
+    if isinstance(data, dict):
+        inner = data.get("response") or data
+        if isinstance(inner, dict):
+            if inner.get("audioWavUrl") or inner.get("audio_wav_url"):
+                return parse_wav_webhook(payload)
+            if inner.get("videoUrl") or inner.get("video_url"):
+                return parse_video_webhook(payload)
     if event.is_error:
         _ensure_not_error(event)
     return event, payload.get("data")

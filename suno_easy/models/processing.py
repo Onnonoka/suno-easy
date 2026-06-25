@@ -4,6 +4,39 @@ import requests
 
 
 @dataclass
+class WavFile:
+    wav_url: str | None = None
+    task_id: str | None = None
+    music_id: str | None = None
+
+    def download(self, path: str):
+        if not self.wav_url:
+            raise ValueError("No wav_url available")
+        r = requests.get(self.wav_url, stream=True)
+        r.raise_for_status()
+        with open(path, "wb") as f:
+            for chunk in r.iter_content(1024 * 1024):
+                f.write(chunk)
+
+    @classmethod
+    def from_task_data(cls, task_data: dict) -> "WavFile":
+        response = task_data.get("response") or {}
+        if not isinstance(response, dict):
+            response = {}
+        wav_url = (
+            response.get("audioWavUrl")
+            or response.get("audio_wav_url")
+            or task_data.get("audioWavUrl")
+            or task_data.get("audio_wav_url")
+        )
+        return cls(
+            wav_url=wav_url,
+            task_id=task_data.get("taskId") or task_data.get("task_id"),
+            music_id=task_data.get("musicId") or task_data.get("music_id"),
+        )
+
+
+@dataclass
 class SeparatedStems:
     vocal_url: str | None = None
     instrumental_url: str | None = None

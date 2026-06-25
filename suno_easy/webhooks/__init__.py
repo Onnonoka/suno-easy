@@ -5,7 +5,9 @@ from .parsers import (
     parse_lyrics_webhook,
     parse_midi_webhook,
     parse_music_webhook,
+    parse_video_webhook,
     parse_vocal_separation_webhook,
+    parse_wav_webhook,
     parse_webhook,
 )
 
@@ -18,5 +20,7 @@ __all__ = [
     "parse_cover_image_webhook",
     "parse_vocal_separation_webhook",
     "parse_midi_webhook",
+    "parse_wav_webhook",
+    "parse_video_webhook",
     "dispatch_webhook",
 ]

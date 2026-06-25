@@ -1,4 +1,41 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
+@dataclass
+class AlignedWord:
+    word: str
+    start_s: float
+    end_s: float
+    success: bool | None = None
+    palign: int | None = None
+
+
+@dataclass
+class TimestampedLyrics:
+    aligned_words: list[AlignedWord] = field(default_factory=list)
+    waveform_data: list[float] = field(default_factory=list)
+    hoot_cer: float | None = None
+    is_streamed: bool | None = None
+
+    @classmethod
+    def from_api_data(cls, data: dict) -> "TimestampedLyrics":
+        words = []
+        for item in data.get("alignedWords") or []:
+            words.append(
+                AlignedWord(
+                    word=item.get("word", ""),
+                    start_s=float(item.get("startS", 0)),
+                    end_s=float(item.get("endS", 0)),
+                    success=item.get("success"),
+                    palign=item.get("palign"),
+                )
+            )
+        return cls(
+            aligned_words=words,
+            waveform_data=list(data.get("waveformData") or []),
+            hoot_cer=data.get("hootCer"),
+            is_streamed=data.get("isStreamed"),
+        )
 
 
 @dataclass

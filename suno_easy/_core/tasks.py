@@ -19,6 +19,8 @@ class TaskKind(str, Enum):
     COVER_IMAGE = "cover_image"
     VOCAL_SEPARATION = "vocal_separation"
     MIDI = "midi"
+    WAV = "wav"
+    VIDEO = "video"
 
 
 RECORD_INFO_ENDPOINTS: dict[TaskKind, str] = {
@@ -27,6 +29,8 @@ RECORD_INFO_ENDPOINTS: dict[TaskKind, str] = {
     TaskKind.COVER_IMAGE: "/api/v1/suno/cover/record-info",
     TaskKind.VOCAL_SEPARATION: "/api/v1/vocal-removal/record-info",
     TaskKind.MIDI: "/api/v1/midi/record-info",
+    TaskKind.WAV: "/api/v1/wav/record-info",
+    TaskKind.VIDEO: "/api/v1/mp4/record-info",
 }
 
 

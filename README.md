@@ -190,25 +190,33 @@ def handle_suno_callback(body: dict):
 ## API Reference
 
 ### `client.music`
-- `generate(...) -> list[Song] | Task`
-- `extend(...) -> list[Song] | Task`
-- `generate_instrumental(...) -> list[Song] | Task`
+- `generate(...)`, `extend(...)`, `generate_instrumental(...)`
+- `mashup(upload_urls, ...)`, `replace_section(...)`, `generate_sounds(...)`
 - `get_task(task_id) -> dict`
 
-Tuning parameters on `generate` / `extend`: `persona_id`, `persona_model`, `negative_tags`, `vocal_gender`, `style_weight`, `weirdness_constraint`, `audio_weight`.
+Tuning parameters on `generate` / `extend` / `mashup`: `persona_id`, `persona_model`, `negative_tags`, `vocal_gender`, `style_weight`, `weirdness_constraint`, `audio_weight`.
 
 ### `client.lyrics`
 - `generate(...) -> list[Lyrics] | Task`
 - `get(task_id) -> list[Lyrics]`
+- `get_timestamped(task_id, audio_id) -> TimestampedLyrics`
 - `get_task(task_id) -> dict`
 
 ### `client.audio`
-- `cover(...)`, `extend(...)` — upload + transform / extend audio
-- `add_vocals(upload_url, prompt, title, style, negative_tags, ...)`
-- `add_instrumental(upload_url, title, tags, negative_tags, ...)`
+- `cover(...)`, `extend(...)`, `add_vocals(...)`, `add_instrumental(...)`
 - `separate_vocals(task_id, audio_id, mode=...)`
-- `generate_midi(task_id, audio_id=None, ...)`, `generate_cover_image(...)`
-- `get_task(...)`, `get_separated_stems(...)`, `get_midi(...)`, `get_cover_image(...)`
+- `convert_wav(task_id, audio_id, ...) -> WavFile | Task`
+- `boost_style(content) -> StyleBoost`
+- `generate_midi(...)`, `generate_cover_image(...)`
+- `get_wav(...)`, `get_separated_stems(...)`, `get_midi(...)`, `get_cover_image(...)`
+
+### `client.account`
+- `get_credits() -> Credits`
+
+### `client.video`
+- `create(task_id, audio_id, ...) -> MusicVideo | Task`
+- `get(task_id) -> MusicVideo`
+- `get_task(task_id) -> dict`
 
 ### `client.persona`
 - `create(task_id, audio_id, name, description, ...) -> Persona`
@@ -216,12 +224,14 @@ Tuning parameters on `generate` / `extend`: `persona_id`, `persona_model`, `nega
 ### Webhooks
 - `parse_music_webhook`, `parse_lyrics_webhook`, `parse_cover_image_webhook`
 - `parse_vocal_separation_webhook`, `parse_midi_webhook`
+- `parse_wav_webhook`, `parse_video_webhook`
 - `parse_webhook`, `dispatch_webhook`
 
 ### Public constants & enums
 - `DEFAULT_CALLBACK_URL`
 - `ModelVersion`, `PersonaModel`, `VocalGender`, `SeparationMode`
 - `Task`, `TaskKind`, `RECORD_INFO_ENDPOINTS`
+- `Credits`, `TimestampedLyrics`, `WavFile`, `MusicVideo`, `StyleBoost`
 
 ---
 
@@ -258,12 +268,11 @@ Test layout:
 
 ---
 
-## Roadmap (not yet implemented)
+## Roadmap (Phase 3)
 
-- `client.account.get_credits()`
-- WAV conversion, music video, mashup, replace section, sounds
 - File upload API (`client.upload.*`)
 - Suno Voice API (`client.voice.*`)
+- CI, `py.typed`, PyPI publish
 
 ---
 

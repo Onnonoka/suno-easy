@@ -4,7 +4,12 @@ from suno_easy import (
     parse_webhook,
     parse_music_webhook,
     parse_lyrics_webhook,
+    parse_wav_webhook,
+    parse_video_webhook,
+    dispatch_webhook,
     Song,
+    WavFile,
+    MusicVideo,
     TaskFailed,
 )
 
@@ -72,6 +77,73 @@ class TestWebhookParsers(unittest.TestCase):
     def test_parse_lyrics_webhook_error_raises(self):
         with self.assertRaises(TaskFailed):
             parse_lyrics_webhook(self.ERROR_PAYLOAD)
+
+    def test_parse_wav_webhook(self):
+        payload = {
+            "code": 200,
+            "msg": "ok",
+            "data": {
+                "callbackType": "complete",
+                "taskId": "wav-1",
+                "audioWavUrl": "https://example.com/track.wav",
+            },
+        }
+        event, wav = parse_wav_webhook(payload)
+        self.assertEqual(event.task_id, "wav-1")
+        self.assertIsInstance(wav, WavFile)
+        self.assertEqual(wav.wav_url, "https://example.com/track.wav")
+
+    def test_parse_video_webhook(self):
+        payload = {
+            "code": 200,
+            "msg": "ok",
+            "data": {
+                "callbackType": "complete",
+                "taskId": "vid-1",
+                "videoUrl": "https://example.com/track.mp4",
+            },
+        }
+        event, video = parse_video_webhook(payload)
+        self.assertEqual(event.task_id, "vid-1")
+        self.assertIsInstance(video, MusicVideo)
+        self.assertEqual(video.video_url, "https://example.com/track.mp4")
+
+    def test_parse_wav_webhook_error_raises(self):
+        payload = {
+            "code": 400,
+            "msg": "WAV conversion failed",
+            "data": {"callbackType": "error", "taskId": "wav-err", "data": None},
+        }
+        with self.assertRaises(TaskFailed):
+            parse_wav_webhook(payload)
+
+    def test_dispatch_webhook_wav(self):
+        payload = {
+            "code": 200,
+            "msg": "ok",
+            "data": {
+                "callbackType": "complete",
+                "taskId": "wav-1",
+                "audioWavUrl": "https://example.com/track.wav",
+            },
+        }
+        _, result = dispatch_webhook(payload)
+        self.assertIsInstance(result, WavFile)
+        self.assertEqual(result.wav_url, "https://example.com/track.wav")
+
+    def test_dispatch_webhook_video(self):
+        payload = {
+            "code": 200,
+            "msg": "ok",
+            "data": {
+                "callbackType": "complete",
+                "taskId": "vid-1",
+                "videoUrl": "https://example.com/track.mp4",
+            },
+        }
+        _, result = dispatch_webhook(payload)
+        self.assertIsInstance(result, MusicVideo)
+        self.assertEqual(result.video_url, "https://example.com/track.mp4")
 
 
 if __name__ == "__main__":
