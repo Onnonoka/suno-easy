@@ -23,3 +23,23 @@ class VocalGender(str, Enum):
 class SeparationMode(str, Enum):
     SEPARATE_VOCAL = "separate_vocal"
     SPLIT_STEM = "split_stem"
+
+
+class SingerSkillLevel(str, Enum):
+    BEGINNER = "beginner"
+    INTERMEDIATE = "intermediate"
+    ADVANCED = "advanced"
+    PROFESSIONAL = "professional"
+
+
+class VoiceLanguage(str, Enum):
+    EN = "en"
+    ZH = "zh"
+    ES = "es"
+    FR = "fr"
+    PT = "pt"
+    DE = "de"
+    JA = "ja"
+    KO = "ko"
+    HI = "hi"
+    RU = "ru"

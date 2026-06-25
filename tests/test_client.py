@@ -26,6 +26,8 @@ class TestSunoClient(unittest.TestCase):
         self.assertEqual(self.client.callback_url, DEFAULT_CALLBACK_URL)
         self.assertIsNotNone(self.client.account)
         self.assertIsNotNone(self.client.video)
+        self.assertIsNotNone(self.client.upload)
+        self.assertIsNotNone(self.client.voice)
 
     def test_callback_url_on_client(self):
         client = SunoClient(api_key="k", callback_url="https://example.com/hook")
@@ -173,6 +175,15 @@ class TestWaitTask(unittest.TestCase):
         )
         self.assertTrue(
             client._task_complete({"response": {"videoUrl": "https://x/v.mp4"}}, "complete")
+        )
+        self.assertTrue(
+            client._task_complete(
+                {"status": "wait_validating", "validateInfo": "Sing this phrase"},
+                "complete",
+            )
+        )
+        self.assertTrue(
+            client._task_complete({"status": "success", "voiceId": "voice-1"}, "complete")
         )
 
     @patch.object(SunoClientClass, "get_task_info")

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "suno-easy"
-version = "0.1.0"
+version = "0.2.0"
 description = "A lightweight, modern, and fully-typed Python SDK for the Suno AI API (sunoapi.org)"
 readme = "README.md"
 authors = [
@@ -23,11 +23,22 @@ dependencies = [
     "requests>=2.25.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/Onnonoka/suno-easy"
 Documentation = "https://github.com/Onnonoka/suno-easy#readme"
 Repository = "https://github.com/Onnonoka/suno-easy.git"
 Issues = "https://github.com/Onnonoka/suno-easy/issues"
+
+[tool.setuptools.package-data]
+suno_easy = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 where = ["."]

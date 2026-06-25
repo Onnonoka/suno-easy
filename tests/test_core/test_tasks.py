@@ -34,6 +34,8 @@ class TestTask(unittest.TestCase):
         )
         self.assertEqual(wav_task.record_info_endpoint, "/api/v1/wav/record-info")
         self.assertEqual(video_task.record_info_endpoint, "/api/v1/mp4/record-info")
+        self.assertEqual(RECORD_INFO_ENDPOINTS[TaskKind.VOICE_VALIDATE], "/api/v1/voice/validate-info")
+        self.assertEqual(RECORD_INFO_ENDPOINTS[TaskKind.VOICE], "/api/v1/voice/record-info")
 
     @patch.object(SunoClient, "get_task_info")
     def test_wav_task_info_uses_correct_endpoint(self, mock_get_task_info):
