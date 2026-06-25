@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "suno-easy"
+version = "0.1.0"
+description = "A lightweight, modern, and fully-typed Python SDK for the Suno AI API (sunoapi.org)"
+readme = "README.md"
+authors = [
+    { name = "Fred", email = "frederic.dymko@gmail.com" }
+]
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "requests>=2.25.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Onnonoka/suno-easy"
+Documentation = "https://github.com/Onnonoka/suno-easy#readme"
+Repository = "https://github.com/Onnonoka/suno-easy.git"
+Issues = "https://github.com/Onnonoka/suno-easy/issues"
+
+[tool.setuptools]
+packages = ["suno_easy"]
