@@ -5,8 +5,21 @@ from __future__ import annotations
 from typing import Any
 
 from ..exceptions import TaskFailed
-from ..models import CoverImage, Lyrics, MIDIData, MusicVideo, SeparatedStems, Song, WavFile
+from ..models import (
+    CoverImage,
+    CustomVoice,
+    Lyrics,
+    MIDIData,
+    MusicVideo,
+    SeparatedStems,
+    Song,
+    VoiceValidationInfo,
+    WavFile,
+)
 from .events import WebhookEvent
+
+_VOICE_VALIDATE_FAILED = {"processing_validate_fail", "fail"}
+_VOICE_GENERATE_FAILED = {"fail", "processing_validate_fail"}
 
 
 def parse_webhook(payload: dict[str, Any]) -> WebhookEvent:
@@ -119,6 +132,49 @@ def parse_video_webhook(payload: dict[str, Any]) -> tuple[WebhookEvent, MusicVid
     return event, MusicVideo.from_task_data(data if isinstance(data, dict) else {})
 
 
+def parse_voice_validate_webhook(
+    payload: dict[str, Any],
+) -> tuple[WebhookEvent, VoiceValidationInfo]:
+    """Parse a Suno Voice validation phrase callback (validate or regenerate)."""
+    event = parse_webhook(payload)
+    data = payload.get("data") or {}
+    info = VoiceValidationInfo.from_api_data(data if isinstance(data, dict) else {})
+    if event.code >= 400 or info.status in _VOICE_VALIDATE_FAILED:
+        raise TaskFailed(
+            {
+                "taskId": info.task_id or event.task_id,
+                "status": info.status or "FAILED",
+                "errorMessage": info.error_message or event.message,
+                "errorCode": info.error_code,
+            }
+        )
+    return event, info
+
+
+def parse_voice_generate_webhook(payload: dict[str, Any]) -> tuple[WebhookEvent, CustomVoice]:
+    """Parse a Suno Voice custom voice generation callback."""
+    event = parse_webhook(payload)
+    data = payload.get("data") or {}
+    voice = CustomVoice.from_api_data(data if isinstance(data, dict) else {})
+    if event.code >= 400 or voice.status in _VOICE_GENERATE_FAILED:
+        raise TaskFailed(
+            {
+                "taskId": voice.task_id or event.task_id,
+                "status": voice.status or "FAILED",
+                "errorMessage": voice.error_message or event.message,
+                "errorCode": voice.error_code,
+            }
+        )
+    return event, voice
+
+
+def parse_voice_regenerate_webhook(
+    payload: dict[str, Any],
+) -> tuple[WebhookEvent, VoiceValidationInfo]:
+    """Parse a regenerated validation phrase callback (same shape as validate)."""
+    return parse_voice_validate_webhook(payload)
+
+
 def dispatch_webhook(payload: dict[str, Any]) -> tuple[WebhookEvent, Any]:
     """Best-effort parser based on payload shape."""
     event = parse_webhook(payload)
@@ -130,6 +186,10 @@ def dispatch_webhook(payload: dict[str, Any]) -> tuple[WebhookEvent, Any]:
         return parse_music_webhook(payload)
     data = payload.get("data") or {}
     if isinstance(data, dict):
+        if "voiceId" in data:
+            return parse_voice_generate_webhook(payload)
+        if "validateInfo" in data or data.get("status") in _VOICE_VALIDATE_FAILED | {"wait_validating"}:
+            return parse_voice_validate_webhook(payload)
         inner = data.get("response") or data
         if isinstance(inner, dict):
             if inner.get("audioWavUrl") or inner.get("audio_wav_url"):

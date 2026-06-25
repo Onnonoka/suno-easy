@@ -40,6 +40,9 @@ from .webhooks import (
     parse_midi_webhook,
     parse_wav_webhook,
     parse_video_webhook,
+    parse_voice_validate_webhook,
+    parse_voice_generate_webhook,
+    parse_voice_regenerate_webhook,
     dispatch_webhook,
 )
 from .exceptions import SunoError, TaskFailed, SunoAPIError
@@ -85,6 +88,9 @@ __all__ = [
     "parse_midi_webhook",
     "parse_wav_webhook",
     "parse_video_webhook",
+    "parse_voice_validate_webhook",
+    "parse_voice_generate_webhook",
+    "parse_voice_regenerate_webhook",
     "dispatch_webhook",
     "SunoError",
     "TaskFailed",

@@ -6,10 +6,15 @@ from suno_easy import (
     parse_lyrics_webhook,
     parse_wav_webhook,
     parse_video_webhook,
+    parse_voice_validate_webhook,
+    parse_voice_generate_webhook,
+    parse_voice_regenerate_webhook,
     dispatch_webhook,
     Song,
     WavFile,
     MusicVideo,
+    VoiceValidationInfo,
+    CustomVoice,
     TaskFailed,
 )
 
@@ -144,6 +149,94 @@ class TestWebhookParsers(unittest.TestCase):
         _, result = dispatch_webhook(payload)
         self.assertIsInstance(result, MusicVideo)
         self.assertEqual(result.video_url, "https://example.com/track.mp4")
+
+    def test_parse_voice_validate_webhook(self):
+        payload = {
+            "code": 200,
+            "msg": "success",
+            "data": {
+                "taskId": "v-task-1",
+                "validateInfo": "Please record this validation phrase clearly.",
+                "status": "wait_validating",
+                "errorCode": 0,
+                "errorMessage": "",
+            },
+        }
+        event, info = parse_voice_validate_webhook(payload)
+        self.assertEqual(event.task_id, "v-task-1")
+        self.assertIsInstance(info, VoiceValidationInfo)
+        self.assertEqual(info.validate_info, "Please record this validation phrase clearly.")
+
+    def test_parse_voice_validate_webhook_error_raises(self):
+        payload = {
+            "code": 400,
+            "msg": "Validation phrase generation failed",
+            "data": {
+                "taskId": "v-task-err",
+                "validateInfo": "",
+                "status": "processing_validate_fail",
+                "errorCode": 500,
+                "errorMessage": "Failed to generate validation phrase",
+            },
+        }
+        with self.assertRaises(TaskFailed):
+            parse_voice_validate_webhook(payload)
+
+    def test_parse_voice_generate_webhook(self):
+        payload = {
+            "code": 200,
+            "msg": "success",
+            "data": {
+                "taskId": "v-gen-1",
+                "voiceId": "voice_abc",
+                "status": "success",
+                "errorCode": 0,
+                "errorMessage": "",
+            },
+        }
+        event, voice = parse_voice_generate_webhook(payload)
+        self.assertEqual(event.task_id, "v-gen-1")
+        self.assertIsInstance(voice, CustomVoice)
+        self.assertEqual(voice.voice_id, "voice_abc")
+
+    def test_parse_voice_regenerate_webhook(self):
+        payload = {
+            "code": 200,
+            "msg": "success",
+            "data": {
+                "taskId": "v-task-1",
+                "validateInfo": "Please record this new validation phrase clearly.",
+                "status": "wait_validating",
+            },
+        }
+        _, info = parse_voice_regenerate_webhook(payload)
+        self.assertIsInstance(info, VoiceValidationInfo)
+
+    def test_dispatch_webhook_voice_validate(self):
+        payload = {
+            "code": 200,
+            "msg": "success",
+            "data": {
+                "taskId": "v-task-1",
+                "validateInfo": "Sing this phrase",
+                "status": "wait_validating",
+            },
+        }
+        _, result = dispatch_webhook(payload)
+        self.assertIsInstance(result, VoiceValidationInfo)
+
+    def test_dispatch_webhook_voice_generate(self):
+        payload = {
+            "code": 200,
+            "msg": "success",
+            "data": {
+                "taskId": "v-gen-1",
+                "voiceId": "voice_abc",
+                "status": "success",
+            },
+        }
+        _, result = dispatch_webhook(payload)
+        self.assertIsInstance(result, CustomVoice)
 
 
 if __name__ == "__main__":
