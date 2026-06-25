@@ -1,43 +1,66 @@
 #!/usr/bin/env python3
-"""
-Quickstart example for suno-easy.
-This script demonstrates how to initialize the SunoClient and run basic actions
-such as generating music, generating lyrics, and separating stems.
-
-Make sure you have installed the requirements:
-    pip install -e .
-Or run it locally if suno_easy is in your python path.
-"""
+"""Quickstart example for suno-easy."""
 
 import os
-from suno_easy import SunoClient, SunoError
+from suno_easy import SunoClient, DEFAULT_CALLBACK_URL, SunoAPIError, parse_lyrics_webhook
+
+
+def demo_webhook_parsing(task_id: str = "demo-task-id"):
+    """Runs locally without an API key."""
+    fake_callback = {
+        "code": 200,
+        "msg": "All generated successfully.",
+        "data": {
+            "callbackType": "complete",
+            "taskId": task_id,
+            "data": [
+                {
+                    "text": "[Verse]\nRed dust rising on the horizon",
+                    "title": "Mars Bound",
+                    "status": "complete",
+                }
+            ],
+        },
+    }
+    event, lyrics = parse_lyrics_webhook(fake_callback)
+    print(f"Webhook stage: {event.callback_type}, title: {lyrics[0].title}")
 
 
 def main():
-    # 1. Initialize client using an API key from environment variables
-    # (or replace with your actual API key)
-    api_key = os.environ.get("SUNO_API_KEY", "your_suno_api_key_here")
-    if api_key == "your_suno_api_key_here":
-        print("[!] Using placeholder API key. Set SUNO_API_KEY env var for actual calls.")
+    api_key = os.environ.get("SUNO_API_KEY")
+    has_api_key = bool(api_key)
 
-    client = SunoClient(api_key=api_key)
-    print("SunoClient initialized successfully.")
+    if not has_api_key:
+        print("[!] SUNO_API_KEY not set — skipping live API call.")
+        print("    Set SUNO_API_KEY to exercise client.lyrics.generate().")
 
-    # 2. Example: Generate lyrics (using dry-run info, or wrapped in try-except)
-    print("\n--- Generating Lyrics ---")
+    client = SunoClient(api_key=api_key or "placeholder")
+    webhook_client = SunoClient(
+        api_key=api_key or "placeholder",
+        callback_url=os.environ.get("SUNO_CALLBACK_URL", "https://yourdomain.com/suno/webhook"),
+    )
+
+    print(f"Polling client callback: {client.callback_url}")
+    print(f"Placeholder documented as: {DEFAULT_CALLBACK_URL}")
+    print(f"Webhook client callback: {webhook_client.callback_url}")
+
+    print("\n--- Webhook parsing demo (no API key required) ---")
+    demo_webhook_parsing()
+
+    if not has_api_key:
+        return
+
+    print("\n--- Live lyrics generation (async) ---")
     try:
-        # We set wait=False for demonstration to avoid blocking and show async flow
-        print("Starting lyric generation (non-blocking/async)...")
-        task_id = client.lyrics.generate(
+        task = client.lyrics.generate(
             prompt="A song about embarking on a journey to Mars",
-            wait=False
+            wait=False,
         )
-        print(f"Lyrics generation started! Task ID: {task_id}")
-        print("In a real application, you would poll client.music.get_task_info(task_id)")
-        print("or wait for a webhook callback.")
-
-    except SunoError as e:
-        print(f"An error occurred during the Suno API call: {e}")
+        print(f"Task ID: {task.task_id}")
+        print("Poll with task.info() or task.wait()")
+        demo_webhook_parsing(task.task_id)
+    except SunoAPIError as e:
+        print(f"API error ({e.status_code}): {e.message}")
 
 
 if __name__ == "__main__":

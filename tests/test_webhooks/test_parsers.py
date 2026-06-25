@@ -1,0 +1,78 @@
+import unittest
+
+from suno_easy import (
+    parse_webhook,
+    parse_music_webhook,
+    parse_lyrics_webhook,
+    Song,
+    TaskFailed,
+)
+
+
+class TestWebhookParsers(unittest.TestCase):
+    MUSIC_PAYLOAD = {
+        "code": 200,
+        "msg": "All generated successfully.",
+        "data": {
+            "callbackType": "complete",
+            "task_id": "task-1",
+            "data": [
+                {
+                    "id": "song-1",
+                    "title": "Test Song",
+                    "audio_url": "https://example.com/song.mp3",
+                    "stream_audio_url": "https://example.com/stream",
+                    "source_stream_audio_url": "https://example.com/source-stream",
+                    "image_url": "https://example.com/cover.jpg",
+                    "prompt": "[Verse] Hello",
+                    "model_name": "chirp-v4",
+                    "tags": "pop",
+                    "createTime": "2025-01-01 00:00:00",
+                    "duration": 120.0,
+                }
+            ],
+        },
+    }
+
+    LYRICS_PAYLOAD = {
+        "code": 200,
+        "msg": "All generated successfully.",
+        "data": {
+            "callbackType": "complete",
+            "taskId": "task-2",
+            "data": [{"text": "[Verse]\nLine one", "title": "Lyric Title", "status": "complete"}],
+        },
+    }
+
+    ERROR_PAYLOAD = {
+        "code": 400,
+        "msg": "Lyrics generation failed",
+        "data": {"callbackType": "error", "taskId": "task-3", "data": None},
+    }
+
+    def test_parse_webhook_music_task_id(self):
+        event = parse_webhook(self.MUSIC_PAYLOAD)
+        self.assertEqual(event.task_id, "task-1")
+        self.assertTrue(event.is_final)
+
+    def test_parse_webhook_lyrics_task_id(self):
+        event = parse_webhook(self.LYRICS_PAYLOAD)
+        self.assertEqual(event.task_id, "task-2")
+
+    def test_parse_music_webhook(self):
+        event, songs = parse_music_webhook(self.MUSIC_PAYLOAD)
+        self.assertEqual(len(songs), 1)
+        self.assertIsInstance(songs[0], Song)
+        self.assertEqual(songs[0].source_stream_url, "https://example.com/source-stream")
+
+    def test_parse_lyrics_webhook(self):
+        _, lyrics = parse_lyrics_webhook(self.LYRICS_PAYLOAD)
+        self.assertEqual(lyrics[0].title, "Lyric Title")
+
+    def test_parse_lyrics_webhook_error_raises(self):
+        with self.assertRaises(TaskFailed):
+            parse_lyrics_webhook(self.ERROR_PAYLOAD)
+
+
+if __name__ == "__main__":
+    unittest.main()

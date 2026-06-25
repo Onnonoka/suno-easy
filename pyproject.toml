@@ -29,5 +29,6 @@ Documentation = "https://github.com/Onnonoka/suno-easy#readme"
 Repository = "https://github.com/Onnonoka/suno-easy.git"
 Issues = "https://github.com/Onnonoka/suno-easy/issues"
 
-[tool.setuptools]
-packages = ["suno_easy"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["suno_easy*"]
