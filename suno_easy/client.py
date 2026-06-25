@@ -3,9 +3,18 @@ from typing import Literal
 
 import requests
 
-from ._core.constants import DEFAULT_CALLBACK_URL
+from ._core.constants import DEFAULT_CALLBACK_URL, DEFAULT_UPLOAD_BASE_URL
 from .exceptions import TaskFailed, SunoAPIError
-from .resources import AccountResource, AudioResource, LyricsResource, MusicResource, PersonaResource, VideoResource
+from .resources import (
+    AccountResource,
+    AudioResource,
+    LyricsResource,
+    MusicResource,
+    PersonaResource,
+    UploadResource,
+    VideoResource,
+    VoiceResource,
+)
 
 WaitUntil = Literal["complete", "stream"]
 
@@ -15,7 +24,12 @@ class SunoClient:
 
     BASE_URL = "https://api.sunoapi.org"
 
-    def __init__(self, api_key: str, callback_url: str | None = None):
+    def __init__(
+        self,
+        api_key: str,
+        callback_url: str | None = None,
+        upload_base_url: str | None = None,
+    ):
         """Initialize the Suno client.
 
         Args:
@@ -24,8 +38,11 @@ class SunoClient:
                 Defaults to :data:`~suno_easy.DEFAULT_CALLBACK_URL`, a documented
                 placeholder for polling-only usage. Set your own URL when handling
                 webhooks on your server.
+            upload_base_url: Base URL for the file upload API (temporary storage).
+                Defaults to :data:`~suno_easy.DEFAULT_UPLOAD_BASE_URL`.
         """
         self.callback_url = callback_url if callback_url is not None else DEFAULT_CALLBACK_URL
+        self.upload_base_url = upload_base_url if upload_base_url is not None else DEFAULT_UPLOAD_BASE_URL
         self.session = requests.Session()
         self.session.headers.update({
             "Authorization": f"Bearer {api_key}",
@@ -38,6 +55,8 @@ class SunoClient:
         self.audio = AudioResource(self)
         self.account = AccountResource(self)
         self.video = VideoResource(self)
+        self.upload = UploadResource(self)
+        self.voice = VoiceResource(self)
 
     def resolve_callback_url(self, callback_url: str | None = None) -> str:
         """Return the effective callback URL (per-call override or client default)."""
@@ -83,7 +102,9 @@ class SunoClient:
             return True
         if isinstance(success_flag, int) and success_flag < 0:
             return True
-        if status is not None and str(status).upper() in {"FAILED", "ERROR"}:
+        if status is not None and str(status).upper() in {"FAILED", "ERROR", "FAIL"}:
+            return True
+        if status is not None and str(status).lower() in {"fail", "processing_validate_fail"}:
             return True
         if success_flag is not None and "FAIL" in str(success_flag).upper():
             return True
@@ -108,6 +129,11 @@ class SunoClient:
         if status == "SUCCESS" or success_flag == "SUCCESS":
             return True
         if success_flag == 1 or success_flag == "1":
+            return True
+
+        if status == "wait_validating" and res.get("validateInfo"):
+            return True
+        if status == "success" and res.get("voiceId"):
             return True
 
         response = res.get("response") or {}

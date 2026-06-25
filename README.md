@@ -9,11 +9,15 @@
 
 ## Features
 
-- **Resource-oriented API**: `client.music`, `client.lyrics`, `client.audio`, `client.persona`
-- **Polling or webhooks**: `wait=True/False`, `Task` handles, and webhook parsers
-- **Typed models**: `Song`, `Lyrics`, `Persona`, `SeparatedStems`, `MIDIData`, `CoverImage`
-- **Built-in downloads**: streaming helpers on `Song` and `SeparatedStems`
-- **API enums**: `ModelVersion`, `PersonaModel`, `VocalGender`, `SeparationMode`
+- **Resource-oriented API** — eight endpoint groups on a single client:
+
+  `client.music` · `client.lyrics` · `client.audio` · `client.persona` · `client.account` · `client.video` · `client.upload` · `client.voice`
+
+- **Polling or webhooks** — `wait=True/False`, `Task` handles, `wait_until="stream"`, and webhook parsers
+- **Typed models** — `Song`, `Lyrics`, `Persona`, `Credits`, `WavFile`, `MusicVideo`, `UploadedFile`, `CustomVoice`, …
+- **Built-in downloads** — streaming helpers on `Song`, `WavFile`, `MusicVideo`, and `SeparatedStems`
+- **API enums** — `ModelVersion`, `PersonaModel`, `VocalGender`, `SeparationMode`, `SingerSkillLevel`, `VoiceLanguage`
+- **PEP 561** — ships `py.typed` for editor/type-checker support
 
 ---
 
@@ -24,11 +28,13 @@ suno-easy/
 ├── suno_easy/
 │   ├── __init__.py          # Public exports
 │   ├── client.py            # SunoClient, HTTP, polling
+│   ├── py.typed             # PEP 561 marker
 │   ├── exceptions.py
 │   ├── tasks.py             # Compatibility shim
 │   ├── _core/               # Task, constants, payload helpers, enums
 │   ├── models/              # Response dataclasses
-│   ├── resources/           # API endpoint groups
+│   ├── resources/           # account, audio, lyrics, music, persona,
+│   │                        # upload, video, voice
 │   └── webhooks/            # Callback payload parsers
 ├── tests/
 │   ├── test_client.py
@@ -38,6 +44,7 @@ suno-easy/
 │   └── test_webhooks/
 ├── examples/
 │   └── quickstart.py
+├── .github/workflows/       # CI (pytest on push / PR)
 └── pyproject.toml
 ```
 
@@ -49,12 +56,41 @@ suno-easy/
 pip install -e .
 ```
 
-For development:
+For development (includes pytest):
 
 ```bash
-pip install -e .
-python -m unittest discover -s tests -v
+pip install -e ".[dev]"
+pytest tests/ -q
 ```
+
+Requires **Python ≥ 3.8**. Current package version: **0.2.0**.
+
+---
+
+## Client configuration
+
+```python
+from suno_easy import SunoClient, DEFAULT_CALLBACK_URL, DEFAULT_UPLOAD_BASE_URL
+
+client = SunoClient(
+    api_key="your_api_key",
+    callback_url="https://yourdomain.com/suno/webhook",  # optional
+    upload_base_url=DEFAULT_UPLOAD_BASE_URL,             # optional override
+)
+```
+
+| Parameter | Default | Purpose |
+|---|---|---|
+| `api_key` | — | Bearer token ([API key page](https://sunoapi.org/api-key)) |
+| `callback_url` | `DEFAULT_CALLBACK_URL` | Webhook URL injected as `callBackUrl` on async endpoints |
+| `upload_base_url` | `DEFAULT_UPLOAD_BASE_URL` | Host for temporary file uploads (separate from the main API) |
+
+**Two API hosts**
+
+| Host | Used for |
+|---|---|
+| `https://api.sunoapi.org` | Music, lyrics, audio, persona, account, video, voice |
+| `https://sunoapiorg.redpandaai.co` | File upload (`client.upload.*`) — files expire after 3 days |
 
 ---
 
@@ -84,7 +120,7 @@ client = SunoClient(
 )
 
 task = client.music.generate(..., wait=False)
-# On your server: event, songs = parse_music_webhook(request.json)
+# On your server: event, result = dispatch_webhook(request.json)
 ```
 
 ---
@@ -146,6 +182,52 @@ status = task.info()   # manual polling
 songs = task.wait()    # block until complete
 ```
 
+### Check remaining credits
+
+```python
+credits = client.account.get_credits()
+print(credits.remaining)
+```
+
+### Upload a file (temporary URL)
+
+```python
+uploaded = client.upload.upload_url(
+    "https://example.com/my-track.mp3",
+    upload_path="audio/uploads",
+    file_name="track.mp3",
+)
+print(uploaded.download_url)  # use in other endpoints (expires in 3 days)
+```
+
+### Suno Voice workflow
+
+```python
+from suno_easy import VoiceLanguage, SingerSkillLevel
+
+# 1. Generate a validation phrase from a vocal segment
+info = client.voice.validate(
+    voice_url="https://example.com/source-vocal.mp3",
+    vocal_start_s=0,
+    vocal_end_s=10,
+    language=VoiceLanguage.EN,
+)
+print(info.validate_info)  # phrase the user must sing
+
+# 2. Submit verification recording → custom voice
+voice = client.voice.generate(
+    info.task_id,
+    verify_url="https://example.com/verification-recording.mp3",
+    voice_name="Bright Pop",
+    singer_skill_level=SingerSkillLevel.INTERMEDIATE,
+)
+print(voice.voice_id)
+
+# 3. Confirm availability
+check = client.voice.check(info.task_id)
+print(check.is_available)
+```
+
 ### Create a persona
 
 ```python
@@ -174,15 +256,16 @@ stems.download_vocal("vocals.mp3")
 ### Handle a webhook on your server
 
 ```python
-from suno_easy import parse_music_webhook, parse_lyrics_webhook
+from suno_easy import dispatch_webhook, parse_music_webhook, parse_lyrics_webhook
 
-# FastAPI / Flask handler pseudo-code
 def handle_suno_callback(body: dict):
-    if "audio_url" in str(body):
-        event, songs = parse_music_webhook(body)
-    else:
-        event, lyrics = parse_lyrics_webhook(body)
+    # Best-effort routing by payload shape
+    event, result = dispatch_webhook(body)
     return event.callback_type
+
+    # Or target a specific parser:
+    # event, songs = parse_music_webhook(body)
+    # event, lyrics = parse_lyrics_webhook(body)
 ```
 
 ---
@@ -221,21 +304,42 @@ Tuning parameters on `generate` / `extend` / `mashup`: `persona_id`, `persona_mo
 ### `client.persona`
 - `create(task_id, audio_id, name, description, ...) -> Persona`
 
+### `client.upload`
+- `upload_url(file_url, upload_path, file_name=None) -> UploadedFile`
+- `upload_base64(base64_data, upload_path, file_name=None) -> UploadedFile`
+- `upload_stream(file, upload_path, file_name=None) -> UploadedFile`
+
+Uses `DEFAULT_UPLOAD_BASE_URL` (not the main Suno API host). Uploaded files are temporary and auto-deleted after **3 days**.
+
+### `client.voice`
+- `validate(voice_url, vocal_start_s, vocal_end_s, ...) -> VoiceValidationInfo | Task`
+- `get_validate_info(task_id) -> VoiceValidationInfo`
+- `generate(task_id, verify_url, ...) -> CustomVoice | Task`
+- `get_record(task_id) -> CustomVoice`
+- `regenerate(task_id, callback_url=None) -> str` — note: upstream field is `calBackUrl`
+- `check(task_id) -> VoiceCheck`
+
 ### Webhooks
 - `parse_music_webhook`, `parse_lyrics_webhook`, `parse_cover_image_webhook`
 - `parse_vocal_separation_webhook`, `parse_midi_webhook`
 - `parse_wav_webhook`, `parse_video_webhook`
 - `parse_webhook`, `dispatch_webhook`
 
-### Public constants & enums
-- `DEFAULT_CALLBACK_URL`
-- `ModelVersion`, `PersonaModel`, `VocalGender`, `SeparationMode`
-- `Task`, `TaskKind`, `RECORD_INFO_ENDPOINTS`
-- `Credits`, `TimestampedLyrics`, `WavFile`, `MusicVideo`, `StyleBoost`
+### Public exports
+
+**Constants:** `DEFAULT_CALLBACK_URL`, `DEFAULT_UPLOAD_BASE_URL`
+
+**Enums:** `ModelVersion`, `PersonaModel`, `VocalGender`, `SeparationMode`, `SingerSkillLevel`, `VoiceLanguage`
+
+**Task API:** `Task`, `TaskKind`, `RECORD_INFO_ENDPOINTS`
+
+**Models:** `Song`, `Lyrics`, `AlignedWord`, `TimestampedLyrics`, `CoverImage`, `MusicVideo`, `SeparatedStems`, `WavFile`, `MIDIData`, `MIDINote`, `MIDIInstrument`, `Persona`, `Credits`, `StyleBoost`, `UploadedFile`, `VoiceValidationInfo`, `CustomVoice`, `VoiceCheck`
+
+**Exceptions:** `SunoError`, `SunoAPIError`, `TaskFailed`
 
 ---
 
-## Breaking changes (since initial release)
+## Breaking changes (since v0.1.0)
 
 | Before | Now |
 |---|---|
@@ -250,29 +354,31 @@ Tuning parameters on `generate` / `extend` / `mashup`: `persona_id`, `persona_mo
 
 ## Testing
 
-Run the full suite:
+Run the full suite locally:
 
 ```bash
-python -m unittest discover -s tests -v
+pip install -e ".[dev]"
+pytest tests/ -q
 ```
 
-Test layout:
+CI runs the same suite on **Python 3.10** and **3.12** (see `.github/workflows/test.yml`).
 
 | Path | Covers |
 |---|---|
 | `tests/test_client.py` | HTTP client, callback URL, polling helpers |
-| `tests/test_core/` | `Task` handle |
-| `tests/test_models/` | Dataclass parsing |
+| `tests/test_core/` | `Task` handle, `TaskKind` endpoints |
+| `tests/test_models/` | Dataclass parsing (`Song`, upload, voice, …) |
 | `tests/test_resources/` | Payload construction per resource |
-| `tests/test_webhooks/` | Callback payload parsers |
+| `tests/test_webhooks/` | Callback payload parsers, `dispatch_webhook` |
 
 ---
 
-## Roadmap (Phase 3)
+## Roadmap
 
-- File upload API (`client.upload.*`)
-- Suno Voice API (`client.voice.*`)
-- CI, `py.typed`, PyPI publish
+- [x] Phase 0–1: SDK architecture, tasks, webhooks
+- [x] Phase 2: credits, timestamped lyrics, WAV, video, mashup, sounds
+- [x] Phase 3: file upload API, Suno Voice API, CI, `py.typed`
+- [ ] PyPI publish (v0.2.0)
 
 ---
 

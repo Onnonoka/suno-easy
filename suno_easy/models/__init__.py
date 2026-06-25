@@ -5,6 +5,8 @@ from .music import Song
 from .persona import Persona
 from .processing import MIDIData, MIDIInstrument, MIDINote, SeparatedStems, WavFile
 from .style import StyleBoost
+from .upload import UploadedFile
+from .voice import CustomVoice, VoiceCheck, VoiceValidationInfo
 
 __all__ = [
     "Song",
@@ -21,4 +23,8 @@ __all__ = [
     "Persona",
     "Credits",
     "StyleBoost",
+    "UploadedFile",
+    "VoiceValidationInfo",
+    "CustomVoice",
+    "VoiceCheck",
 ]

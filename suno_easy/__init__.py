@@ -1,5 +1,5 @@
 from .client import SunoClient
-from ._core.constants import DEFAULT_CALLBACK_URL
+from ._core.constants import DEFAULT_CALLBACK_URL, DEFAULT_UPLOAD_BASE_URL
 from .models import (
     Song,
     Lyrics,
@@ -15,9 +15,20 @@ from .models import (
     Persona,
     Credits,
     StyleBoost,
+    UploadedFile,
+    VoiceValidationInfo,
+    CustomVoice,
+    VoiceCheck,
 )
 from ._core.tasks import Task, TaskKind, RECORD_INFO_ENDPOINTS
-from ._core.types import ModelVersion, PersonaModel, SeparationMode, VocalGender
+from ._core.types import (
+    ModelVersion,
+    PersonaModel,
+    SeparationMode,
+    VocalGender,
+    SingerSkillLevel,
+    VoiceLanguage,
+)
 from .webhooks import (
     WebhookEvent,
     CallbackType,
@@ -36,6 +47,7 @@ from .exceptions import SunoError, TaskFailed, SunoAPIError
 __all__ = [
     "SunoClient",
     "DEFAULT_CALLBACK_URL",
+    "DEFAULT_UPLOAD_BASE_URL",
     "Task",
     "TaskKind",
     "RECORD_INFO_ENDPOINTS",
@@ -43,6 +55,8 @@ __all__ = [
     "PersonaModel",
     "VocalGender",
     "SeparationMode",
+    "SingerSkillLevel",
+    "VoiceLanguage",
     "Song",
     "Lyrics",
     "AlignedWord",
@@ -57,6 +71,10 @@ __all__ = [
     "Persona",
     "Credits",
     "StyleBoost",
+    "UploadedFile",
+    "VoiceValidationInfo",
+    "CustomVoice",
+    "VoiceCheck",
     "WebhookEvent",
     "CallbackType",
     "parse_webhook",

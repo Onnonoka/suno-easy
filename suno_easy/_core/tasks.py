@@ -21,6 +21,8 @@ class TaskKind(str, Enum):
     MIDI = "midi"
     WAV = "wav"
     VIDEO = "video"
+    VOICE_VALIDATE = "voice_validate"
+    VOICE = "voice"
 
 
 RECORD_INFO_ENDPOINTS: dict[TaskKind, str] = {
@@ -31,6 +33,8 @@ RECORD_INFO_ENDPOINTS: dict[TaskKind, str] = {
     TaskKind.MIDI: "/api/v1/midi/record-info",
     TaskKind.WAV: "/api/v1/wav/record-info",
     TaskKind.VIDEO: "/api/v1/mp4/record-info",
+    TaskKind.VOICE_VALIDATE: "/api/v1/voice/validate-info",
+    TaskKind.VOICE: "/api/v1/voice/record-info",
 }
 
 
