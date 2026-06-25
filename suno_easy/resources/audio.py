@@ -6,7 +6,7 @@ from .._core.payload import add_tuning_params, model_value
 from .._core.submit import submit_api_task
 from .._core.tasks import Task, TaskKind, RECORD_INFO_ENDPOINTS
 from .._core.types import ModelVersion, PersonaModel, SeparationMode, VocalGender
-from ..models import Song, CoverImage, SeparatedStems, MIDIData
+from ..models import Song, CoverImage, SeparatedStems, MIDIData, WavFile, StyleBoost
 
 
 class AudioResource:
@@ -26,6 +26,9 @@ class AudioResource:
 
     def get_midi_task(self, task_id: str) -> dict:
         return self.client.get_task_info(task_id, RECORD_INFO_ENDPOINTS[TaskKind.MIDI])
+
+    def get_wav_task(self, task_id: str) -> dict:
+        return self.client.get_task_info(task_id, RECORD_INFO_ENDPOINTS[TaskKind.WAV])
 
     def cover(
         self,
@@ -300,3 +303,31 @@ class AudioResource:
             timeout=timeout,
             wait_until=wait_until,
         )
+
+    def convert_wav(
+        self,
+        task_id: str,
+        audio_id: str,
+        callback_url: str | None = None,
+        wait: bool = True,
+        timeout: int = 300,
+    ) -> Task[WavFile] | WavFile:
+        payload = {"taskId": task_id, "audioId": audio_id}
+        return submit_api_task(
+            self.client,
+            "/api/v1/wav/generate",
+            payload,
+            TaskKind.WAV,
+            WavFile.from_task_data,
+            callback_url=callback_url,
+            wait=wait,
+            timeout=timeout,
+        )
+
+    def get_wav(self, task_id: str) -> WavFile:
+        return WavFile.from_task_data(self.get_wav_task(task_id))
+
+    def boost_style(self, content: str) -> StyleBoost:
+        """Enhance a style description using the style boost endpoint."""
+        response = self.client.post("/api/v1/style/generate", {"content": content})
+        return StyleBoost.from_api_data(response["data"])

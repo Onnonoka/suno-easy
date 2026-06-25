@@ -5,7 +5,7 @@ import requests
 
 from ._core.constants import DEFAULT_CALLBACK_URL
 from .exceptions import TaskFailed, SunoAPIError
-from .resources import AudioResource, LyricsResource, MusicResource, PersonaResource
+from .resources import AccountResource, AudioResource, LyricsResource, MusicResource, PersonaResource, VideoResource
 
 WaitUntil = Literal["complete", "stream"]
 
@@ -36,6 +36,8 @@ class SunoClient:
         self.lyrics = LyricsResource(self)
         self.persona = PersonaResource(self)
         self.audio = AudioResource(self)
+        self.account = AccountResource(self)
+        self.video = VideoResource(self)
 
     def resolve_callback_url(self, callback_url: str | None = None) -> str:
         """Return the effective callback URL (per-call override or client default)."""
@@ -107,6 +109,14 @@ class SunoClient:
             return True
         if success_flag == 1 or success_flag == "1":
             return True
+
+        response = res.get("response") or {}
+        if isinstance(response, dict):
+            if response.get("audioWavUrl") or response.get("audio_wav_url"):
+                return True
+            if response.get("videoUrl") or response.get("video_url"):
+                return True
+
         if "midiData" in res and isinstance(res["midiData"], dict):
             if res["midiData"].get("state") == "complete":
                 return True

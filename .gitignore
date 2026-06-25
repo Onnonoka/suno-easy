@@ -74,6 +74,7 @@ ENV/
 env/
 
 # IDEs
+.cursor/
 .idea/
 .vscode/
 *.swp
