@@ -25,6 +25,14 @@
 ## Installation
 
 ```bash
+pip install suno-easy
+```
+
+Latest version: **0.2.0**
+
+From source:
+
+```bash
 pip install -e .
 ```
 
@@ -191,7 +199,7 @@ suno-easy/
 
 - [x] Phases 0–3: full API, voice webhooks, CI, `py.typed`, documentation
 - [x] Examples per feature ([examples/](examples/README.md))
-- [ ] PyPI publish (v0.2.0)
+- [x] PyPI publish (v0.2.0)
 
 ---
 
